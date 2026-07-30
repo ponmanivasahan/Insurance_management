@@ -1,7 +1,6 @@
 import { useState } from "react";
 import MainLayout from "../Layout/Mainlayout";
 import { Card, PageHeader, StatisticsCard, DataTable, StatusBadge, Button } from "../../components/UI";
-import { toast } from "react-hot-toast";
 
 function Commission() {
     const [statements] = useState([
@@ -18,7 +17,7 @@ function Commission() {
                     title="Earnings & Commissions Portfolio"
                     breadcrumb="Live updates of written premium earnings, upcoming payouts, and milestone incentives."
                     actionButton={
-                        <Button variant="primary" className="h-9" onClick={() => toast.success("Premium payout request for realized YTD earnings ($54,820) submitted successfully to the billing review center!")}>
+                        <Button variant="primary" className="h-9" onClick={() => alert("Premium payout request for realized YTD earnings ($54,820) submitted successfully to the billing review center!")}>
                             Request Premium Payout
                         </Button>
                     }
