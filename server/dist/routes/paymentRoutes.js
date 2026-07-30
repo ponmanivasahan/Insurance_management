@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const paymentController_1 = require("../controllers/paymentController");
+const authMiddleware_1 = require("../middleware/authMiddleware");
+const roleMiddleware_1 = require("../middleware/roleMiddleware");
+const loggerMiddleware_1 = require("../middleware/loggerMiddleware");
+const router = (0, express_1.Router)();
+router.use(authMiddleware_1.verifyToken);
+router.post("/", (0, roleMiddleware_1.authorizeRoles)("Admin", "Agent", "Customer"), (0, loggerMiddleware_1.logActivity)("Submitted Premium Payment"), paymentController_1.recordPayment);
+router.get("/", (0, roleMiddleware_1.authorizeRoles)("Admin", "Agent", "Customer"), paymentController_1.getAllPayments);
+exports.default = router;

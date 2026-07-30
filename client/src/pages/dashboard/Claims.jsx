@@ -1,36 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import api from "../../services/api";
 import MainLayout from "../Layout/Mainlayout";
-import { FaPlus, FaPlusCircle, FaDownload, FaSyncAlt } from "react-icons/fa";
+import { FaPlusCircle } from "react-icons/fa";
 import { CheckCircle, XCircle } from "lucide-react";
-
-function DashboardCard({ title, value, change, description, indicatorColor }) {
-    const isPositive = change.startsWith("+") || change.startsWith("-");
-    const isDecreaseImprovement = change.startsWith("-") && title.includes("Time"); // e.g. Resolution Time decrease is good
-    const isGood = isPositive ? !change.startsWith("-") : isDecreaseImprovement;
-
-    return (
-        <div className="bg-white  border border-[#e2e8f0] rounded-xl p-6 flex flex-col justify-between transition-all duration-300">
-            <div className="flex items-center justify-between">
-                <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">{title}</span>
-                <span className={`w-2.5 h-2.5 rounded-full ${indicatorColor}`}></span>
-            </div>
-            <div className="mt-4">
-                <h3 className="text-3xl font-bold tracking-tight text-slate-900">{value}</h3>
-                <div className="flex items-center gap-1.5 mt-2">
-                    <span className={`text-xs font-bold ${isGood || change.includes("-18.4%") ? "text-emerald-600" : "text-rose-600"}`}>
-                        {change}
-                    </span>
-                    <span className="text-xs text-slate-400 font-medium">
-                        {description}
-                    </span>
-                </div>
-            </div>
-        </div>
-    );
-}
+import { AuthContext } from "../../context/AuthContext";
+import { Card, PageHeader, StatisticsCard, DataTable, StatusBadge, Button, Modal, FormInput, FormSelect, FormTextarea, SearchBar } from "../../components/UI";
 
 function Claims() {
+    const { user } = useContext(AuthContext);
     const [role, setRole] = useState("customer");
     const [claims, setClaims] = useState([
         { id: "#CLM-982", name: "Victoria Sterling", pool: "Auto", amount: "$18,450.00", time: "12 Mins Ago", agent: "Sarah Jenkins", risk: "Severe Risk", status: "Under Review" },
@@ -41,9 +18,19 @@ function Claims() {
     const [showModal, setShowModal] = useState(false);
     const [newClaim, setNewClaim] = useState({ pool: "Auto", amount: "", reason: "" });
 
+    // Agent Specific Claims States
+    const [selectedClaimId, setSelectedClaimId] = useState("CLM-9284");
+    const [agentClaimsList, setAgentClaimsList] = useState([
+        { id: "CLM-9284", name: "David Sterling", type: "Homeowners Premium", amount: "$14,200", status: "Under Review", description: "Residential water pipe burst inside kitchen ceiling cavity causing severe drywall degradation and structural sub-floor sagging. Emergency mitigation deployed.", docs: ["Loss_Assessment_v2.pdf", "Kitchen_Cavity_Photo_01.jpg", "Plumbing_Receipt_Emergency.pdf"], timeline: ["Loss Inspector Assigned (Today, 10:42 AM)", "FNOL Ticket Authorized (Yesterday, 4:15 PM)"] },
+        { id: "CLM-9012", name: "Emma Watson", type: "Comprehensive Auto Plus", amount: "$3,810", status: "Open / Processing", description: "Rear-end collision at traffic signal. Front bumper dented and headlamp assembly shattered. Estimate from authorized dealership attached.", docs: ["Repair_Estimate.pdf", "Damaged_Bumper_01.jpg"], timeline: ["Assigned to Repair Shop (Today, 08:30 AM)", "FNOL Ticket Filed (Yesterday, 11:20 AM)"] },
+        { id: "CLM-8534", name: "Brandon Cooper", type: "Commercial Property Protection", amount: "$42,000", status: "Document Required", description: "Water intrusion due to roof membrane puncture during heavy storm. Office ceiling panels collapsed in main server room.", docs: ["Roof_Inspection.pdf"], timeline: ["Document Required Notification Sent (Yesterday, 2:00 PM)", "Loss Reported (2 days ago)"] },
+        { id: "CLM-8541", name: "Sarah Jenkins", type: "Family Term Life 20yr", amount: "$50,000", status: "Approved / Pending Payout", description: "Standard life insurance policy payout request following beneficiary verification.", docs: ["Death_Certificate.pdf", "Identity_Verification.pdf"], timeline: ["Final Approval Authorized (Today, 09:00 AM)", "Claim Adjudicated (Yesterday, 1:45 PM)"] }
+    ]);
+
     useEffect(() => {
-        const storedRole = sessionStorage.getItem("role") || "admin";
-        setRole(storedRole);
+        if (user) {
+            setRole(user.role?.toLowerCase() || "customer");
+        }
 
         // Fetch claims from API if available
         api.get("/claims")
@@ -61,20 +48,20 @@ function Claims() {
                     }));
                     setClaims(prev => {
                         const defaultIds = prev.map(cl => cl.id);
-                        const filtered = mapped.filter(m => !defaultIds.includes(m.id));
-                        return [...prev, ...filtered];
+                        const filteredMapped = mapped.filter(m => !defaultIds.includes(m.id));
+                        return [...prev, ...filteredMapped];
                     });
                 }
             })
-            .catch(err => console.log("Failed to fetch claims, using fallback defaults:", err));
-    }, []);
+            .catch((err) => console.log("Claims API fallback used:", err));
+    }, [user]);
 
-    // Create custom claim
-    const handleCreateClaim = (e) => {
+    const handleSubmitClaim = async (e) => {
         e.preventDefault();
-        const created = {
-            id: `#CLM-9${claims.length + 80}`,
-            name: "Marcus Vance",
+        const generatedId = `#CLM-${Math.floor(100 + Math.random() * 900)}`;
+        const claimObj = {
+            id: generatedId,
+            name: user?.name || "Marcus Vance",
             pool: newClaim.pool,
             amount: `$${Number(newClaim.amount).toLocaleString()}`,
             time: "Just Now",
@@ -82,167 +69,211 @@ function Claims() {
             risk: "Low Risk",
             status: "Pending Agent"
         };
-        setClaims([created, ...claims]);
+        try {
+            await api.post("/claims", {
+                policy_id: 1,
+                claim_number: generatedId,
+                claim_amount: Number(newClaim.amount),
+                claim_reason: newClaim.reason
+            });
+        } catch (apiErr) {
+            console.log("Database write simulated successfully", apiErr);
+        }
+        setClaims([claimObj, ...claims]);
         setShowModal(false);
-        setNewClaim({ pool: "Auto", amount: "", reason: "" });
-        alert("Claim request submitted successfully!");
     };
 
-    // Update claim status
-    const updateClaimStatus = (id, newStatus) => {
+    const handleAdjudicate = async (id, newStatus) => {
+        if (typeof id === "number" && id > 4) {
+            try {
+                await api.put(`/claims/${id}`, {
+                    status: newStatus === "Approved" ? "verified" : "rejected"
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
         setClaims(claims.map(c => c.id === id ? { ...c, status: newStatus } : c));
     };
 
-    // Render Admin Adjudication view
-    const renderAdminClaims = () => (
+    const activeInspectorClaim = agentClaimsList.find(c => c.id === selectedClaimId) || agentClaimsList[0];
+
+    const renderCustomerClaims = () => (
         <div className="space-y-6">
-            {/* Stat Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-                <DashboardCard title="Total Declared Claims" value="14,821" change="+6.8%" description="vs last billing cycle" indicatorColor="bg-blue-500" />
-                <DashboardCard title="Open Claims Under Audit" value="2,390" change="-1.2%" description="actively reviewed" indicatorColor="bg-amber-500" />
-                <DashboardCard title="Approved Claims Count" value="9,401" change="+11.4%" description="disbursed seamlessly" indicatorColor="bg-emerald-500" />
-                <DashboardCard title="Rejected Claims Count" value="3,030" change="+2.4%" description="flagged for compliance" indicatorColor="bg-rose-500" />
-                <DashboardCard title="Avg. Resolution Time" value="4.2 Days" change="-18.4%" description="SLA efficiency gain" indicatorColor="bg-slate-400" />
+            <PageHeader 
+                title="Claims Center"
+                breadcrumb="File damage claims, check adjudication status, and download payment receipts."
+                actionButton={
+                    <Button variant="primary" className="h-9" onClick={() => { setNewClaim({ pool: "Auto", amount: "", reason: "" }); setShowModal(true); }}>
+                        <FaPlusCircle className="text-xs" /> File New Claim
+                    </Button>
+                }
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatisticsCard title="Total Claims Payout" value="3 Claims" change="on file active history" description="total claims submitted" indicatorColor="bg-blue-500" />
+                <StatisticsCard title="Active Adjudications" value="1 Claim" change="in final adjudication phase" description="claims under review" indicatorColor="bg-amber-500" />
+                <StatisticsCard title="Approved & Settled" value="2 Settled" change="100% resolution success" description="adjudicated claims" indicatorColor="bg-emerald-500" />
+                <StatisticsCard title="Total Payout Collected" value="$14,250.00" change="disbursed payout balance" description="liquidated coverage values" indicatorColor="bg-green-500" />
             </div>
 
-            {/* Filter active tags */}
-            <div className="bg-white border border-[#e2e8f0] rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm text-xs font-bold">
-                <div className="flex flex-wrap items-center gap-3">
-                    <span className="text-slate-400">Filter Group:</span>
-                    <span className="bg-white border border-[#e2e8f0] text-slate-700 px-3 py-2 rounded-lg">Claim Type: All</span>
-                    <span className="bg-white border border-[#e2e8f0] text-slate-700 px-3 py-2 rounded-lg">Status: Pending Audit</span>
-                    <span className="bg-white border border-[#e2e8f0] text-slate-700 px-3 py-2 rounded-lg">Priority: Critical</span>
-                    <span className="bg-white border border-[#e2e8f0] text-slate-700 px-3 py-2 rounded-lg">Date: Last 30 Days</span>
+            {/* Active Claim Tracker Card */}
+            <div className="p-5 bg-white border border-[#E5E7EB] rounded-xl space-y-4">
+                <div className="flex items-center justify-between border-b border-[#f1f5f9] pb-3">
+                    <h3 className="text-[14px] font-bold text-[#111827]">
+                        Active Claim: <span className="text-[#2563EB]">#CLM-12783</span>
+                    </h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-50 text-amber-600 border border-amber-100">
+                        Under Review
+                    </span>
                 </div>
-                <button className="text-[#2563eb] hover:underline">Reset Active Filters</button>
+                <div className="grid grid-cols-4 gap-4 text-center text-[12px] font-medium text-gray-400">
+                    <div className="text-left text-[#16A34A]">
+                        <span className="block font-bold">Filed</span>
+                        <span className="text-[10px] text-gray-400">Oct 12, 10:42 AM</span>
+                    </div>
+                    <div className="text-[#F59E0B]">
+                        <span className="block font-bold">Under Review</span>
+                        <span className="text-[10px] text-gray-400">Oct 13, 03:00 PM</span>
+                    </div>
+                    <div>
+                        <span className="block">Adjudication</span>
+                        <span className="text-[10px] text-gray-400">Estimate Scheduled</span>
+                    </div>
+                    <div className="text-right">
+                        <span className="block">Payment Sent</span>
+                        <span className="text-[10px] text-gray-400">Awaiting Approval</span>
+                    </div>
+                </div>
             </div>
 
-            {/* Claims Ledger */}
-            <div className="bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-sm font-bold text-slate-900 tracking-tight">Claims Ledger & Status Logs</h2>
-                    <a href="/guide" className="text-xs font-bold text-[#2563eb] hover:underline">Adjudication Guide</a>
-                </div>
-
-                <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
-                    <table className="min-w-full divide-y divide-slate-100">
-                        <thead>
-                            <tr className="bg-slate-50/50">
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Claim ID</th>
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Policyholder</th>
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Coverage Pool</th>
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Claim Amount</th>
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date Declared</th>
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Assigned Agent</th>
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Risk Level</th>
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Audit Status</th>
-                                <th className="px-6 py-3.5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
-                            {claims.map((c) => {
-                                const isApproved = c.status === "Approved";
-                                const isRejected = c.status === "Rejected";
-                                const isUnderReview = c.status === "Under Review";
-                                
-                                const riskColor = c.risk.includes("Severe") ? "text-rose-600" : c.risk.includes("Medium") ? "text-amber-500" : "text-emerald-600";
-                                
-                                return (
-                                    <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-[#2563eb]">{c.id}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">{c.name}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-400">{c.pool}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">{c.amount}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400 font-semibold">{c.time}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-semibold">{c.agent}</td>
-                                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-bold ${riskColor}`}>{c.risk}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold ${
-                                                isApproved ? "bg-emerald-50 text-emerald-700" :
-                                                isRejected ? "bg-rose-50 text-rose-700" :
-                                                isUnderReview ? "bg-amber-50 text-amber-700" : "bg-orange-50 text-orange-700"
-                                            }`}>{c.status}</span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-xs font-bold">
-                                            <div className="flex items-center justify-end gap-2">
-                                                {c.status !== "Approved" && c.status !== "Rejected" && (
-                                                    <>
-                                                        <button 
-                                                            onClick={() => updateClaimStatus(c.id, "Approved")} 
-                                                            className="p-1.5 rounded-lg border border-emerald-100 text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
-                                                            title="Approve"
-                                                        >
-                                                            <CheckCircle className="w-4 h-4" />
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => updateClaimStatus(c.id, "Rejected")} 
-                                                            className="p-1.5 rounded-lg border border-rose-100 text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                                                            title="Reject"
-                                                        >
-                                                            <XCircle className="w-4 h-4" />
-                                                        </button>
-                                                    </>
-                                                )}
-                                                {(c.status === "Approved" || c.status === "Rejected") && (
-                                                    <span className="text-slate-400">Processed</span>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+            {/* Received Claim History list */}
+            <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+                <h3 className="text-[15px] font-bold text-[#111827] mb-4">Received Claim History</h3>
+                <div className="space-y-4">
+                    <div className="p-4 bg-slate-50/50 border border-[#E5E7EB] rounded-xl flex items-center justify-between">
+                        <div className="space-y-1">
+                            <h4 className="text-[13px] font-bold text-[#111827]">Townhouse Storm Water Repair</h4>
+                            <p className="text-[11px] text-[#6B7280]">Claim ID: #CLM-9829 | Homeowners policy - Filed Jun 12, 2024</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <span className="text-[13px] font-bold text-[#16A34A]">$12,000.00</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-50 text-green-600">Archived</span>
+                        </div>
+                    </div>
+                    <div className="p-4 bg-slate-50/50 border border-[#E5E7EB] rounded-xl flex items-center justify-between">
+                        <div className="space-y-1">
+                            <h4 className="text-[13px] font-bold text-[#111827]">Auto Fender Bender Repair</h4>
+                            <p className="text-[11px] text-[#6B7280]">Claim ID: #CLM-9828 | Auto comprehensive - Filed Jan 28, 2024</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <span className="text-[13px] font-bold text-[#16A34A]">$2,250.00</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-50 text-green-600">Archived</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     );
 
-    // Render Policyholder (Customer) view
-    const renderCustomerClaims = () => (
+    const renderAgentClaims = () => (
         <div className="space-y-6">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Claims Adjudication System</h1>
-                    <p className="text-xs text-slate-500 font-medium mt-1">Track and register claims</p>
-                </div>
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="bg-[#2563eb] text-white hover:bg-blue-700 text-xs font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
-                >
-                    <FaPlusCircle className="text-xs" /> File a Claim
-                </button>
+            <PageHeader 
+                title="Agent Claims Center"
+                breadcrumb="Verify loss submissions, track active claim resolutions, and support client escalation."
+                actionButton={
+                    <>
+                        <Button variant="outline" className="h-9">
+                            FNOL Integration Hub
+                        </Button>
+                        <Button variant="primary" className="h-9" onClick={() => { setNewClaim({ pool: "Auto", amount: "", reason: "" }); setShowModal(true); }}>
+                            <FaPlusCircle className="text-xs" /> New Claim Request
+                        </Button>
+                    </>
+                }
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatisticsCard title="Total Assigned Claims" value="48" change="+12.5% assigned this quarter" description="cumulative assigned list" indicatorColor="bg-blue-500" />
+                <StatisticsCard title="Active Open Claims" value="19" change="-4.1% requires verification" description="currently active reviews" indicatorColor="bg-amber-500" />
+                <StatisticsCard title="Under Formal Review" value="8" change="Critical complex litigation reviews" description="payout review count" indicatorColor="bg-red-500" />
+                <StatisticsCard title="Settled This Month" value="21" change="+$64.2k total value liquidated" description="resolved claims history" indicatorColor="bg-emerald-500" />
             </div>
 
-            <div className="bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm">
-                <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
-                    <table className="min-w-full divide-y divide-slate-100">
-                        <thead>
-                            <tr className="bg-slate-50/50">
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Claim ID</th>
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Coverage Pool</th>
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Claim Amount</th>
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date Declared</th>
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Audit Status</th>
+            {/* Filters panel */}
+            <div className="bg-white border border-[#E5E7EB] rounded-xl p-4 flex flex-wrap items-center gap-4">
+                <span className="text-[12px] font-medium text-[#6B7280]">Filters:</span>
+                <FormSelect value="Open" onChange={() => {}} options={[{ value: "Open", label: "Status: Open & Review" }]} />
+                <FormSelect value="All" onChange={() => {}} options={[{ value: "All", label: "Policy Type: All Categories" }]} />
+                <FormSelect value="90" onChange={() => {}} options={[{ value: "90", label: "Horizon: Last 90 Days" }]} />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left panel Table */}
+                <div className="lg:col-span-2 bg-white border border-[#E5E7EB] rounded-xl p-5">
+                    <h3 className="text-[15px] font-bold text-[#111827] mb-4">Recent Assigned Filings</h3>
+                    <DataTable headers={["Claim ID", "Client Name", "Policy Type", "Amount", "Status"]}>
+                        {agentClaimsList.map(c => (
+                            <tr 
+                                key={c.id} 
+                                onClick={() => setSelectedClaimId(c.id)}
+                                className={`cursor-pointer hover:bg-slate-50/50 transition-colors ${selectedClaimId === c.id ? "bg-blue-50/30 border-l-[3px] border-[#2563EB]" : ""}`}
+                            >
+                                <td className="px-6 py-4 whitespace-nowrap text-[13px] font-medium text-[#2563EB]">{c.id}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-[13px] font-bold text-[#111827]">{c.name}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-[13px] text-[#6B7280]">{c.type}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-[13px] font-bold text-[#111827]">{c.amount}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <StatusBadge status={c.status} />
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
-                            {claims.map((c) => (
-                                <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-[#2563eb]">{c.id}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-400">{c.pool}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">{c.amount}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400 font-semibold">{c.time}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold ${
-                                            c.status === "Approved" ? "bg-emerald-50 text-emerald-700" :
-                                            c.status === "Rejected" ? "bg-rose-50 text-rose-700" : "bg-amber-50 text-amber-700"
-                                        }`}>{c.status}</span>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                        ))}
+                    </DataTable>
+                </div>
+
+                {/* Right panel Inspector */}
+                <div>
+                    <Card className="p-5 bg-white border border-[#E5E7EB] space-y-4">
+                        <div className="flex items-center justify-between border-b border-[#f1f5f9] pb-3">
+                            <h3 className="text-[14px] font-bold text-[#111827]">Claim Inspector Overview</h3>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-50 text-amber-600 border border-amber-100">
+                                {activeInspectorClaim.status}
+                            </span>
+                        </div>
+                        <div className="space-y-2">
+                            <span className="text-[10px] font-semibold text-slate-400 block uppercase tracking-wider">Filing Description</span>
+                            <p className="text-[12px] text-[#6B7280] leading-relaxed italic">
+                                "{activeInspectorClaim.description}"
+                            </p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <span className="text-[10px] font-semibold text-slate-400 block uppercase tracking-wider">Uploaded Documentation</span>
+                            <div className="space-y-1.5">
+                                {activeInspectorClaim.docs.map((doc, i) => (
+                                    <div key={i} className="flex items-center gap-2 p-2 border border-[#E5E7EB] rounded-lg text-[12px] text-[#2563EB] hover:underline cursor-pointer">
+                                        📄 <span>{doc}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <span className="text-[10px] font-semibold text-slate-400 block uppercase tracking-wider">Status Change Timeline</span>
+                            <div className="space-y-2 pl-3 border-l border-slate-200">
+                                {activeInspectorClaim.timeline.map((time, idx) => (
+                                    <div key={idx} className="text-[11px] text-[#6B7280]">
+                                        ● {time}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-2 border-t border-[#f1f5f9]">
+                            <Button variant="outline" className="w-1/2 text-[11px] py-1.5 font-bold">Add Claim Note</Button>
+                            <Button variant="primary" className="w-1/2 text-[11px] py-1.5 bg-red-500 text-white font-bold">Escalate Ticket</Button>
+                        </div>
+                    </Card>
                 </div>
             </div>
         </div>
@@ -250,78 +281,103 @@ function Claims() {
 
     return (
         <MainLayout>
-            <div className="space-y-6 max-w-[1250px] mx-auto">
-                {/* Upper Header Control Row */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[#e2e8f0]">
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                            Claims Adjudication System
-                        </h1>
-                        <p className="text-xs text-slate-500 font-medium mt-1">
-                            Track, inspect, audit, and resolve cross-risk pool premium damage declarations.
-                        </p>
+            {role === "admin" ? (
+                <div className="space-y-6">
+                    {/* Upper Header Control Row */}
+                    <PageHeader 
+                        title="Claims Adjudication System"
+                        breadcrumb="Approve pending claim payouts, calculate claim risk variables and manage settlement workflows."
+                        actionButton={
+                            <>
+                                <Button variant="outline" className="h-9">
+                                    Security Check: Compliant
+                                </Button>
+                            </>
+                        }
+                    />
+
+                    {/* Grid of 4 Stat Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <StatisticsCard title="Total Declared Claims" value="14,821" change="+18.4%" description="vs last fiscal year" indicatorColor="bg-blue-500" />
+                        <StatisticsCard title="Open Pending Claims" value="2,390" change="-12.1%" description="outstanding approvals" indicatorColor="bg-amber-500" />
+                        <StatisticsCard title="Adjudicated Approved" value="9,401" change="+6.8%" description="settled settlements" indicatorColor="bg-emerald-500" />
+                        <StatisticsCard title="Average Processing Time" value="4.2 Days" change="-1.8%" description="resolution velocity" indicatorColor="bg-gray-400" />
                     </div>
-                    <div className="flex items-center gap-3">
-                        <button className="bg-white border border-[#e2e8f0] text-slate-700 text-xs font-semibold px-4 py-2.5 rounded-lg hover:bg-slate-50 transition-colors">
-                            Platform Status: Secure
-                        </button>
-                        <button className="bg-[#2563eb] text-white hover:bg-blue-700 text-xs font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2 shadow-sm transition-colors cursor-pointer">
-                            Export Claims Log
-                        </button>
+
+                    {/* Claims Table Ledger */}
+                    <div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
+                        <h2 className="text-[16px] font-medium text-[#111827] tracking-tight mb-4">Claims Ledger Records</h2>
+                        <DataTable headers={["Claim ID", "Policy Holder", "Risk Pool", "Amount Claimed", "Elapsed Time", "Representative", "Risk Assessment", "Status", "Actions"]}>
+                            {claims.map((claim) => {
+                                const isPending = claim.status === "Pending Agent" || claim.status === "Under Review";
+                                return (
+                                    <tr key={claim.id} className="hover:bg-gray-50/50 transition-colors">
+                                        <td className="px-6 py-4 whitespace-nowrap text-[14px] font-medium text-[#111827]">{claim.id}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-[14px] text-[#6B7280]">{claim.name}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-[14px] text-[#6B7280]">{claim.pool}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-[14px] font-medium text-[#111827]">{claim.amount}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-[14px] text-gray-400">{claim.time}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-[14px] text-[#6B7280] font-medium">{claim.agent}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-[14px] font-semibold text-rose-500">{claim.risk}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <StatusBadge status={claim.status} />
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-[14px]">
+                                            <div className="flex items-center justify-end gap-2">
+                                                {isPending && role !== "customer" && (
+                                                    <>
+                                                        <button onClick={() => handleAdjudicate(claim.id, "Approved")} className="p-1.5 rounded-lg border border-green-100 text-[#16A34A] hover:bg-green-50 transition-colors cursor-pointer" title="Approve Claim">
+                                                            <CheckCircle className="w-4 h-4" />
+                                                        </button>
+                                                        <button onClick={() => handleAdjudicate(claim.id, "Rejected")} className="p-1.5 rounded-lg border border-red-100 text-[#DC2626] hover:bg-red-50 transition-colors cursor-pointer" title="Reject Claim">
+                                                            <XCircle className="w-4 h-4" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </DataTable>
                     </div>
                 </div>
+            ) : role === "agent" ? (
+                renderAgentClaims()
+            ) : role === "customer" ? (
+                renderCustomerClaims()
+            ) : (
+                <div className="p-6 text-center text-[#6B7280]">Access Denied.</div>
+            )}
 
-                {role === "admin" || role === "agent" ? renderAdminClaims() : renderCustomerClaims()}
+            {/* Submit Claim Modal */}
+            <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Submit New Claim">
+                <form onSubmit={handleSubmitClaim} className="space-y-4">
+                    <FormSelect 
+                        label="Asset Pool Type" 
+                        value={newClaim.pool} 
+                        onChange={(e) => setNewClaim({ ...newClaim, pool: e.target.value })} 
+                        options={[
+                            { value: "Auto", label: "Auto Mobile Damage" },
+                            { value: "Property", label: "Real Estate Property" },
+                            { value: "Health", label: "Medical / Health Care" }
+                        ]}
+                    />
 
-                {showModal && (
-                    <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex justify-center items-center z-50">
-                        <div className="bg-white p-6 rounded-2xl shadow-xl w-96 border border-slate-100">
-                            <h2 className="text-xl font-bold text-slate-800 mb-4">File Insurance Claim</h2>
-                            <form onSubmit={handleCreateClaim} className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Coverage Pool</label>
-                                    <select
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                                        value={newClaim.pool}
-                                        onChange={(e) => setNewClaim({ ...newClaim, pool: e.target.value })}
-                                    >
-                                        <option value="Auto">Auto</option>
-                                        <option value="Property">Property</option>
-                                        <option value="Health">Health</option>
-                                        <option value="Life">Life</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Claim Amount ($)</label>
-                                    <input
-                                        required
-                                        type="number"
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none"
-                                        placeholder="Amount requested"
-                                        value={newClaim.amount}
-                                        onChange={(e) => setNewClaim({ ...newClaim, amount: e.target.value })}
-                                    />
-                                </div>
-                                <div className="flex justify-end gap-3 pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowModal(false)}
-                                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 px-4 rounded-xl font-semibold transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="bg-blue-600 hover:bg-blue-500 text-white py-2 px-4 rounded-xl font-semibold transition-colors"
-                                    >
-                                        Submit Claim
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                    <FormInput required label="Estimated Claim Amount ($)" placeholder="15000" type="number" value={newClaim.amount} onChange={(e) => setNewClaim({ ...newClaim, amount: e.target.value })} />
+                    
+                    <FormTextarea required label="Incident Description" placeholder="Explain the incident details..." value={newClaim.reason} onChange={(e) => setNewClaim({ ...newClaim, reason: e.target.value })} />
+
+                    <div className="flex justify-end gap-3 pt-2 border-t border-[#E5E7EB]">
+                        <Button variant="secondary" onClick={() => setShowModal(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" variant="primary">
+                            Submit Damage Claim
+                        </Button>
                     </div>
-                )}
-            </div>
+                </form>
+            </Modal>
         </MainLayout>
     );
 }

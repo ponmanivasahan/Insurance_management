@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import MainLayout from "../Layout/Mainlayout";
+import { AuthContext } from "../../context/AuthContext";
+import { Card, PageHeader, Button, FormInput, FormSelect } from "../../components/UI";
 
 function Settings() {
-    const [role, setRole] = useState("admin");
+    const { user } = useContext(AuthContext);
+    const [role, setRole] = useState("customer");
     const [mfa, setMfa] = useState(true);
     const [ipLock, setIpLock] = useState(false);
     const [emailTrigger, setEmailTrigger] = useState(true);
@@ -11,8 +14,10 @@ function Settings() {
     const [showKey, setShowKey] = useState(false);
 
     useEffect(() => {
-        setRole(sessionStorage.getItem("role") || "admin");
-    }, []);
+        if (user) {
+            setRole(user.role?.toLowerCase() || "customer");
+        }
+    }, [user]);
 
     const toggleMfa = () => setMfa(!mfa);
     const toggleIpLock = () => setIpLock(!ipLock);
@@ -26,187 +31,145 @@ function Settings() {
 
     return (
         <MainLayout>
-            <div className="space-y-6 max-w-[1600px] mx-auto">
+            <div className="space-y-6">
                 
                 {/* Upper Header Control Row */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[#e2e8f0]">
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                            Global Platform Settings
-                        </h1>
-                        <p className="text-xs text-slate-500 font-medium mt-1">
-                            Configure system rules, broker commissions, security credentials, and compliance protocols.
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <button className="bg-white border border-[#e2e8f0] text-slate-700 text-xs font-semibold px-4 py-2.5 rounded-lg hover:bg-slate-50 transition-colors">
-                            Platform Status: Secure
-                        </button>
-                        <button 
-                            onClick={handleDeploy}
-                            className="bg-[#2563eb] text-white hover:bg-blue-700 text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm transition-colors cursor-pointer"
-                        >
-                            Deploy Live Settings
-                        </button>
-                    </div>
-                </div>
+                <PageHeader 
+                    title="Global Platform Settings"
+                    breadcrumb="Configure system rules, broker commissions, security credentials, and compliance protocols."
+                    actionButton={
+                        <>
+                            <Button variant="outline" className="h-9">
+                                Platform Status: Secure
+                            </Button>
+                            <Button variant="primary" className="h-9" onClick={handleDeploy}>
+                                Deploy Live Settings
+                            </Button>
+                        </>
+                    }
+                />
 
                 {/* Top Row: Profile Configuration & Security Controls */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Platform Profile Configuration */}
-                    <div className="lg:col-span-2 bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm space-y-4">
-                        <h2 className="text-sm font-bold text-slate-900 tracking-tight mb-2">
-                            Platform Profile Configuration
-                        </h2>
-                        
-                        <div>
-                            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Tenant Company Identity</label>
-                            <input 
-                                type="text"
-                                defaultValue="InsureFlow Platform Inc."
-                                className="w-full bg-white border border-[#e2e8f0] rounded-lg p-3 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">System Operations Email</label>
-                            <input 
-                                type="email"
-                                defaultValue="ops@insureflow-platform.com"
-                                className="w-full bg-white border border-[#e2e8f0] rounded-lg p-3 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
-                        </div>
+                    <div className="lg:col-span-2">
+                        <Card className="space-y-4">
+                            <h2 className="text-[16px] font-medium text-[#111827] tracking-tight mb-2">
+                                Platform Profile Configuration
+                            </h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormInput label="Tenant Identity Name" placeholder="InsureFlow Platform Inc." />
+                                <FormInput label="Ops Control Email" placeholder="ops@insureflow-platform.com" />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormInput label="Support Phone SLA Line" placeholder="+1 (800) 555-FLOW" />
+                                <FormSelect 
+                                    label="Default Commission Scheme" 
+                                    options={[
+                                        { value: "SDR-8", label: "Standard SDR (8.0% Volume)" },
+                                        { value: "SDR-12", label: "Premium Broker (12.0% Volume)" }
+                                    ]}
+                                />
+                            </div>
+                        </Card>
                     </div>
 
-                    {/* Platform Security & Timeout Controls */}
-                    <div className="bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm space-y-6">
-                        <h2 className="text-sm font-bold text-slate-900 tracking-tight">
-                            Platform Security & Timeout Controls
-                        </h2>
-
-                        {/* MFA Toggle */}
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <h4 className="text-xs font-bold text-slate-950">Enforce Multi-Factor Auth (MFA)</h4>
-                                <p className="text-[10px] text-slate-400 font-medium mt-0.5">Mandatory 2FA validation on all agent/auditor logins.</p>
+                    {/* Timeout & Security Controls */}
+                    <div>
+                        <Card className="space-y-4">
+                            <h2 className="text-[16px] font-medium text-[#111827] tracking-tight mb-2">
+                                Timeout & Security Controls
+                            </h2>
+                            <div className="space-y-3 text-[14px]">
+                                <div className="flex items-center justify-between py-1">
+                                    <div>
+                                        <span className="font-medium text-[#111827] block">Multi-Factor MFA</span>
+                                        <span className="text-[12px] text-[#6B7280]">Force MFA for admin routes</span>
+                                    </div>
+                                    <input type="checkbox" checked={mfa} onChange={toggleMfa} className="w-4 h-4 rounded text-[#2563EB]" />
+                                </div>
+                                <div className="flex items-center justify-between py-1">
+                                    <div>
+                                        <span className="font-medium text-[#111827] block">Restrict IP Address Access</span>
+                                        <span className="text-[12px] text-[#6B7280]">Allow only whitelisted IPs</span>
+                                    </div>
+                                    <input type="checkbox" checked={ipLock} onChange={toggleIpLock} className="w-4 h-4 rounded text-[#2563EB]" />
+                                </div>
                             </div>
-                            <button 
-                                onClick={toggleMfa}
-                                className={`w-10 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${mfa ? "bg-blue-600" : "bg-slate-300"}`}
-                            >
-                                <span className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${mfa ? "translate-x-4" : "translate-x-0"}`}></span>
-                            </button>
-                        </div>
-
-                        {/* IP Lock Toggle */}
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <h4 className="text-xs font-bold text-slate-950">IP Access Restriction Lock</h4>
-                                <p className="text-[10px] text-slate-400 font-medium mt-0.5">Isolate database queries to corporate VPN range.</p>
-                            </div>
-                            <button 
-                                onClick={toggleIpLock}
-                                className={`w-10 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${ipLock ? "bg-blue-600" : "bg-slate-300"}`}
-                            >
-                                <span className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${ipLock ? "translate-x-4" : "translate-x-0"}`}></span>
-                            </button>
-                        </div>
+                        </Card>
                     </div>
                 </div>
 
-                {/* Bottom Row Grid: Underwriting, Triggers & API Keys */}
+                {/* Underwriting Terms & Automated SMS/Email Triggers */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Automated Underwriting & Terms */}
-                    <div className="bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm space-y-4">
-                        <h2 className="text-sm font-bold text-slate-900 tracking-tight mb-2">
-                            Automated Underwriting & Terms
-                        </h2>
-
-                        <div className="space-y-3.5 text-xs">
-                            <div className="flex justify-between items-center py-2 border-b border-slate-50 font-semibold text-slate-600">
-                                <span>Auto-Renewal Buffer Period</span>
-                                <span className="text-[#2563eb] font-bold">30 Days Prior</span>
+                    {/* Underwriting Rule Parameters */}
+                    <div className="lg:col-span-2">
+                        <Card className="space-y-4">
+                            <h2 className="text-[16px] font-medium text-[#111827] tracking-tight mb-2">
+                                Underwriting Rule Parameters
+                            </h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <FormInput label="Claim Auto-Approve Limit" placeholder="$5,000" />
+                                <FormInput label="Max Policy Term Buffer" placeholder="30 Days" />
+                                <FormInput label="Default Damage Ded. Fee" placeholder="$500.00" />
                             </div>
-                            <div className="flex justify-between items-center py-2 border-b border-slate-50 font-semibold text-slate-600">
-                                <span>Default Auto Damage Broker Fee</span>
-                                <span className="text-[#2563eb] font-bold">2.5% Premium</span>
-                            </div>
-                            <div className="flex justify-between items-center py-2 font-semibold text-slate-600">
-                                <span>Grace Period for Non-Payment</span>
-                                <span className="text-[#2563eb] font-bold">15 Calendar Days</span>
-                            </div>
-                        </div>
+                        </Card>
                     </div>
 
-                    {/* System Email/SMS Triggers */}
-                    <div className="bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm space-y-6">
-                        <h2 className="text-sm font-bold text-slate-900 tracking-tight">
-                            System Email/SMS Triggers
-                        </h2>
-
-                        {/* Claim Approval Email Toggle */}
-                        <div className="flex items-center justify-between gap-4">
-                            <span className="text-xs font-semibold text-slate-700">Claim Approval Notifications (Email)</span>
-                            <button 
-                                onClick={toggleEmail}
-                                className={`w-10 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${emailTrigger ? "bg-blue-600" : "bg-slate-300"}`}
-                            >
-                                <span className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${emailTrigger ? "translate-x-4" : "translate-x-0"}`}></span>
-                            </button>
-                        </div>
-
-                        {/* SMS Alert Toggle */}
-                        <div className="flex items-center justify-between gap-4">
-                            <span className="text-xs font-semibold text-slate-700">SLA Warning Alert (Instant SMS)</span>
-                            <button 
-                                onClick={toggleSms}
-                                className={`w-10 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${smsTrigger ? "bg-blue-600" : "bg-slate-300"}`}
-                            >
-                                <span className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${smsTrigger ? "translate-x-4" : "translate-x-0"}`}></span>
-                            </button>
-                        </div>
-
-                        {/* Failed Notification Toggle */}
-                        <div className="flex items-center justify-between gap-4">
-                            <span className="text-xs font-semibold text-slate-700">Failed Renewal Retry Notifications</span>
-                            <button 
-                                onClick={toggleFailedRetry}
-                                className={`w-10 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${failedRetry ? "bg-blue-600" : "bg-slate-300"}`}
-                            >
-                                <span className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${failedRetry ? "translate-x-4" : "translate-x-0"}`}></span>
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* API Keys & Gateway Access */}
-                    <div className="bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm space-y-4">
-                        <h2 className="text-sm font-bold text-slate-900 tracking-tight mb-2">
-                            API Keys & Gateway Access
-                        </h2>
-
-                        <div>
-                            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Production API Endpoint Authorization</label>
-                            <div className="flex items-center justify-between bg-slate-50 border border-[#e2e8f0] rounded-lg p-3 text-xs">
-                                <span className="font-mono text-slate-700 truncate select-all">
-                                    {showKey ? "pk_live_09x218aef82180bacd4825902" : "pk_live_09×218aef82180ba..."}
-                                </span>
-                                <button 
-                                    onClick={() => setShowKey(!showKey)}
-                                    className="text-blue-600 font-bold hover:underline ml-2"
-                                >
-                                    {showKey ? "Hide" : "Reveal Key"}
-                                </button>
+                    {/* Automated Notification Triggers */}
+                    <div>
+                        <Card className="space-y-4">
+                            <h2 className="text-[16px] font-medium text-[#111827] tracking-tight mb-2">
+                                Automated Notification Triggers
+                            </h2>
+                            <div className="space-y-3 text-[14px]">
+                                <div className="flex items-center justify-between py-1">
+                                    <div>
+                                        <span className="font-medium text-[#111827] block">Email Warning Alert</span>
+                                        <span className="text-[12px] text-[#6B7280]">Send email notifications</span>
+                                    </div>
+                                    <input type="checkbox" checked={emailTrigger} onChange={toggleEmail} className="w-4 h-4 rounded text-[#2563EB]" />
+                                </div>
+                                <div className="flex items-center justify-between py-1">
+                                    <div>
+                                        <span className="font-medium text-[#111827] block">SMS Warning Alert</span>
+                                        <span className="text-[12px] text-[#6B7280]">Send SMS notifications</span>
+                                    </div>
+                                    <input type="checkbox" checked={smsTrigger} onChange={toggleSms} className="w-4 h-4 rounded text-[#2563EB]" />
+                                </div>
+                                <div className="flex items-center justify-between py-1">
+                                    <div>
+                                        <span className="font-medium text-[#111827] block">Failed Retry Warn</span>
+                                        <span className="text-[12px] text-[#6B7280]">Email admins on failed logins</span>
+                                    </div>
+                                    <input type="checkbox" checked={failedRetry} onChange={toggleFailedRetry} className="w-4 h-4 rounded text-[#2563EB]" />
+                                </div>
                             </div>
-                        </div>
-
-                        <div className="flex justify-between items-center pt-2">
-                            <span className="text-xs font-semibold text-slate-500">Live Webhook Dispatch Status</span>
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700">
-                                Live Connected
-                            </span>
-                        </div>
+                        </Card>
                     </div>
                 </div>
+
+                {/* API Credentials Management */}
+                {role === "admin" && (
+                    <div className="bg-white border border-[#E5E7EB] rounded-xl p-6 space-y-4">
+                        <h2 className="text-[16px] font-medium text-[#111827] tracking-tight">
+                            Platform API Integration Credentials
+                        </h2>
+                        <div className="flex flex-col sm:flex-row items-center gap-4 bg-gray-50/50 p-4 border border-[#E5E7EB] rounded-lg">
+                            <div className="flex-1 font-mono text-[13px] text-[#111827]">
+                                {showKey ? "live_pk_51NzWqJLy3xK1Sdf98042Klsad92348" : "••••••••••••••••••••••••••••••••••••••••"}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" className="px-3 py-1 text-[12px] h-8" onClick={() => setShowKey(!showKey)}>
+                                    {showKey ? "Hide Secret Key" : "Reveal Secret Key"}
+                                </Button>
+                                <Button variant="outline" className="px-3 py-1 text-[12px] h-8">
+                                    Roll API Credentials
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
             </div>
         </MainLayout>

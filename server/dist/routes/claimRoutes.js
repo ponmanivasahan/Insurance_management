@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const claimController_1 = require("../controllers/claimController");
+const authMiddleware_1 = require("../middleware/authMiddleware");
+const roleMiddleware_1 = require("../middleware/roleMiddleware");
+const loggerMiddleware_1 = require("../middleware/loggerMiddleware");
+const router = (0, express_1.Router)();
+router.use(authMiddleware_1.verifyToken);
+router.post("/", (0, roleMiddleware_1.authorizeRoles)("Admin", "Agent", "Customer"), (0, loggerMiddleware_1.logActivity)("Submitted Claim Request"), claimController_1.submitClaim);
+router.get("/", (0, roleMiddleware_1.authorizeRoles)("Admin", "Agent", "Customer"), claimController_1.getAllClaims);
+router.put("/:id/adjudicate", (0, roleMiddleware_1.authorizeRoles)("Admin", "Agent"), (0, loggerMiddleware_1.logActivity)("Processed Claim Adjudication"), claimController_1.adjudicateClaim);
+exports.default = router;

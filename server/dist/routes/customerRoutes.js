@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const customerController_1 = require("../controllers/customerController");
+const authMiddleware_1 = require("../middleware/authMiddleware");
+const roleMiddleware_1 = require("../middleware/roleMiddleware");
+const loggerMiddleware_1 = require("../middleware/loggerMiddleware");
+const router = (0, express_1.Router)();
+router.use(authMiddleware_1.verifyToken);
+router.post("/", (0, roleMiddleware_1.authorizeRoles)("Admin", "Agent"), (0, loggerMiddleware_1.logActivity)("Created Customer Profile"), customerController_1.addCustomer);
+router.get("/", (0, roleMiddleware_1.authorizeRoles)("Admin", "Agent"), customerController_1.getAllCustomers);
+router.get("/:id", (0, roleMiddleware_1.authorizeRoles)("Admin", "Agent", "Customer"), customerController_1.getCustomerById);
+router.put("/:id", (0, roleMiddleware_1.authorizeRoles)("Admin", "Agent", "Customer"), (0, loggerMiddleware_1.logActivity)("Updated Customer Profile"), customerController_1.updateCustomer);
+router.delete("/:id", (0, roleMiddleware_1.authorizeRoles)("Admin"), (0, loggerMiddleware_1.logActivity)("Deleted Customer Profile"), customerController_1.deleteCustomer);
+exports.default = router;

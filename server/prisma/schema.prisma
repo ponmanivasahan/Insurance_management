@@ -1,0 +1,177 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  Admin
+  Agent
+  Customer
+}
+
+enum Status {
+  Active
+  Suspended
+}
+
+enum ClaimStatus {
+  Pending
+  Approved
+  Rejected
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  name          String
+  email         String         @unique
+  password      String
+  role          Role           @default(Customer)
+  status        Status         @default(Active)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  customer      Customer?
+  notifications Notification[]
+  activityLogs  ActivityLog[]
+
+  @@map("users")
+}
+
+model Customer {
+  id              Int        @id @default(autoincrement())
+  userId          Int        @unique @map("user_id")
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName       String     @map("first_name")
+  lastName        String     @map("last_name")
+  gender          String
+  dateOfBirth     DateTime   @map("date_of_birth")
+  phone           String
+  email           String     @unique
+  address         String
+  city            String
+  state           String
+  country         String
+  postalCode      String     @map("postal_code")
+  occupation      String
+  nomineeName     String     @map("nominee_name")
+  nomineeRelation String     @map("nominee_relation")
+  aadhaarNumber   String     @unique @map("aadhaar_number")
+  panNumber       String     @unique @map("pan_number")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  policies        Policy[]
+  documents       Document[]
+
+  @@map("customers")
+}
+
+model PolicyType {
+  id          Int      @id @default(autoincrement())
+  policyName  String   @map("policy_name")
+  description String
+  coverage    String
+  premiumBase Float    @map("premium_base")
+  duration    Int      // duration in months
+  status      Status   @default(Active)
+  policies    Policy[]
+
+  @@map("policy_types")
+}
+
+model Policy {
+  id               Int              @id @default(autoincrement())
+  customerId       Int              @map("customer_id")
+  customer         Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  policyTypeId     Int              @map("policy_type_id")
+  policyType       PolicyType       @relation(fields: [policyTypeId], references: [id])
+  policyNumber     String           @unique @map("policy_number")
+  premiumAmount    Float            @map("premium_amount")
+  coverageAmount   Float            @map("coverage_amount")
+  startDate        DateTime         @map("start_date")
+  endDate          DateTime         @map("end_date")
+  paymentFrequency String           @map("payment_frequency") // Monthly, Quarterly, Yearly
+  status           String           @default("Active") // Active, Lapsed, Cancelled
+  payments         PremiumPayment[]
+  claims           Claim[]
+  documents        Document[]
+
+  @@map("policies")
+}
+
+model PremiumPayment {
+  id            Int      @id @default(autoincrement())
+  policyId      Int      @map("policy_id")
+  policy        Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  amount        Float
+  paymentMethod String   @map("payment_method") // Card, NetBanking, UPI
+  transactionId String   @unique @map("transaction_id")
+  paymentStatus String   @map("payment_status") // Paid, Pending, Failed
+  paymentDate   DateTime @default(now()) @map("payment_date")
+  dueDate       DateTime @map("due_date")
+
+  @@map("premium_payments")
+}
+
+model Claim {
+  id             Int         @id @default(autoincrement())
+  policyId       Int         @map("policy_id")
+  policy         Policy      @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  claimNumber    String      @unique @map("claim_number")
+  claimAmount    Float       @map("claim_amount")
+  claimReason    String      @map("claim_reason")
+  claimStatus    ClaimStatus @default(Pending) @map("claim_status")
+  submissionDate DateTime    @default(now()) @map("submission_date")
+  approvedDate   DateTime?   @map("approved_date")
+  remarks        String?
+
+  @@map("claims")
+}
+
+model Document {
+  id           Int      @id @default(autoincrement())
+  customerId   Int      @map("customer_id")
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  policyId     Int?     @map("policy_id")
+  policy       Policy?  @relation(fields: [policyId], references: [id])
+  documentType String   @map("document_type") // IDProof, PolicyTerm, ClaimEvidence
+  fileName     String   @map("file_name")
+  filePath     String   @map("file_path")
+  uploadedAt   DateTime @default(now()) @map("uploaded_at")
+
+  @@map("documents")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   // Info, Warning, Alert
+  status    String   @default("Unread") // Unread, Read
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activity  String
+  ipAddress String   @map("ip_address")
+  device    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("activity_logs")
+}
+
+model SystemSetting {
+  id           Int    @id @default(autoincrement())
+  settingKey   String @unique @map("setting_key")
+  settingValue String @map("setting_value")
+
+  @@map("system_settings")
+}

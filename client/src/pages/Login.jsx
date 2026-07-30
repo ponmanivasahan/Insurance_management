@@ -1,29 +1,28 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaEnvelope, FaLock, FaShieldAlt } from "react-icons/fa";
-import api from "../services/api";
+import { FaEnvelope, FaLock, FaShieldAlt, FaEye, FaEyeSlash } from "react-icons/fa";
+import { AuthContext } from "../context/AuthContext";
+import toast from "react-hot-toast";
+import { motion } from "framer-motion";
 
 function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    
+    const { loginUser } = useContext(AuthContext);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         try {
-            const res = await api.post("/auth/login", {
-                email,
-                password
-            });
-            sessionStorage.setItem("token", res.data.token);
-            sessionStorage.setItem("role", res.data.role);
-            sessionStorage.setItem("name", res.data.user?.name || "User");
-            sessionStorage.setItem("email", res.data.user?.email || "");
+            await loginUser(email, password);
+            toast.success("Welcome back! Login Successful.");
             navigate("/dashboard");
         } catch (err) {
-            alert("Login Denied: " + (err.response?.data?.message || "Invalid Credentials"));
+            toast.error(err.response?.data?.message || "Invalid Credentials");
         } finally {
             setLoading(false);
         }
@@ -33,13 +32,18 @@ function Login() {
         <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-tr from-slate-950 via-slate-900 to-blue-950 px-4">
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
             
-            <div className="relative w-full max-w-md bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-2xl p-8 shadow-2xl transition-all duration-300 hover:border-blue-500/30">
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="relative w-full max-w-md bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-2xl p-8 shadow-2xl transition-all duration-300 hover:border-blue-500/30"
+            >
                 <div className="flex flex-col items-center mb-8">
                     <div className="w-12 h-12 rounded-xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-4 shadow-lg shadow-blue-500/5 animate-pulse">
                         <FaShieldAlt className="text-2xl" />
                     </div>
-                    <h2 className="text-3xl font-extrabold text-white tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-                        Insurance CMS
+                    <h2 className="text-3xl font-extrabold text-white tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400 font-sans">
+                        InsureFlow
                     </h2>
                     <p className="text-sm text-slate-400 mt-2">
                         Sign in to manage policies and claims
@@ -48,7 +52,7 @@ function Login() {
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
-                        <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
                             Email Address
                         </label>
                         <div className="relative">
@@ -59,6 +63,7 @@ function Login() {
                                 type="email"
                                 required
                                 placeholder="name@example.com"
+                                value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full bg-slate-950/40 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                             />
@@ -67,7 +72,7 @@ function Login() {
 
                     <div>
                         <div className="flex justify-between items-center mb-2">
-                            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
                                 Password
                             </label>
                         </div>
@@ -76,19 +81,27 @@ function Login() {
                                 <FaLock />
                             </span>
                             <input
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 required
                                 placeholder="••••••••"
+                                value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-slate-950/40 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                                className="w-full bg-slate-950/40 border border-slate-800 rounded-xl py-3 pl-10 pr-10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-white"
+                            >
+                                {showPassword ? <FaEyeSlash /> : <FaEye />}
+                            </button>
                         </div>
                     </div>
 
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full relative group overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-blue-500/20 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
+                        className="w-full relative group overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-blue-500/20 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                     >
                         <span className="relative z-10">
                             {loading ? "Signing in..." : "Sign In"}
@@ -97,12 +110,20 @@ function Login() {
                     </button>
                 </form>
 
-                <div className="mt-8 text-center border-t border-slate-800/60 pt-6">
-                    <p className="text-xs text-slate-500">
+                {/* Developer Mode credentials info */}
+                <div className="mt-6 bg-slate-950/30 border border-slate-800/80 rounded-xl p-4 text-xs space-y-1.5">
+                    <p className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Developer Credentials Hint:</p>
+                    <p className="text-slate-500"><span className="text-[#2563eb] font-bold">Admin:</span> admin@insureflow.com / admin123</p>
+                    <p className="text-slate-500"><span className="text-[#2563eb] font-bold">Agent:</span> agent@insureflow.com / agent123</p>
+                    <p className="text-slate-500"><span className="text-[#2563eb] font-bold">Customer:</span> customer@gmail.com / customer123</p>
+                </div>
+
+                <div className="mt-6 text-center border-t border-slate-800/60 pt-4">
+                    <p className="text-xs text-slate-500 font-semibold">
                         Secure connection encrypted with 256-bit SSL
                     </p>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 }

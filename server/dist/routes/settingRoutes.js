@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const settingController_1 = require("../controllers/settingController");
+const authMiddleware_1 = require("../middleware/authMiddleware");
+const roleMiddleware_1 = require("../middleware/roleMiddleware");
+const loggerMiddleware_1 = require("../middleware/loggerMiddleware");
+const router = (0, express_1.Router)();
+router.use(authMiddleware_1.verifyToken);
+router.get("/", settingController_1.getSettings);
+router.post("/", (0, roleMiddleware_1.authorizeRoles)("Admin"), (0, loggerMiddleware_1.logActivity)("Modified System Setting"), settingController_1.updateSetting);
+exports.default = router;
