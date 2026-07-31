@@ -1,6 +1,6 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 generator client {
@@ -8,30 +8,13 @@ generator client {
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
-enum Role {
-  Admin
-  Agent
-  Customer
-}
-
-enum Status {
-  Active
-  Suspended
-}
-
-enum ClaimStatus {
-  Pending
-  Approved
-  Rejected
-}
-
 model User {
   id            Int            @id @default(autoincrement())
   name          String
   email         String         @unique
   password      String
-  role          Role           @default(Customer)
-  status        Status         @default(Active)
+  role          String         @default("Customer")
+  status        String         @default("Active")
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
   customer      Customer?
@@ -75,7 +58,7 @@ model PolicyType {
   coverage    String
   premiumBase Float    @map("premium_base")
   duration    Int      // duration in months
-  status      Status   @default(Active)
+  status      String   @default("Active")
   policies    Policy[]
 
   @@map("policy_types")
@@ -116,15 +99,15 @@ model PremiumPayment {
 }
 
 model Claim {
-  id             Int         @id @default(autoincrement())
-  policyId       Int         @map("policy_id")
-  policy         Policy      @relation(fields: [policyId], references: [id], onDelete: Cascade)
-  claimNumber    String      @unique @map("claim_number")
-  claimAmount    Float       @map("claim_amount")
-  claimReason    String      @map("claim_reason")
-  claimStatus    ClaimStatus @default(Pending) @map("claim_status")
-  submissionDate DateTime    @default(now()) @map("submission_date")
-  approvedDate   DateTime?   @map("approved_date")
+  id             Int       @id @default(autoincrement())
+  policyId       Int       @map("policy_id")
+  policy         Policy    @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  claimNumber    String    @unique @map("claim_number")
+  claimAmount    Float     @map("claim_amount")
+  claimReason    String    @map("claim_reason")
+  claimStatus    String    @default("Pending") @map("claim_status")
+  submissionDate DateTime  @default(now()) @map("submission_date")
+  approvedDate   DateTime? @map("approved_date")
   remarks        String?
 
   @@map("claims")

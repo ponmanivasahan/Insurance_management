@@ -16,7 +16,7 @@ export const comparePassword = async (password: string, hash: string): Promise<b
 export interface TokenPayload {
     userId: number;
     email: string;
-    role: "Admin" | "Agent" | "Customer";
+    role: string;
 }
 
 export const generateAccessToken = (payload: TokenPayload): string => {

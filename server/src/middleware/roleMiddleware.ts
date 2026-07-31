@@ -7,7 +7,7 @@ export const authorizeRoles = (...allowedRoles: Array<"Admin" | "Agent" | "Custo
             return res.status(401).json({ message: "Authentication required." });
         }
 
-        if (!allowedRoles.includes(req.user.role)) {
+        if (!allowedRoles.includes(req.user.role as any)) {
             return res.status(403).json({ message: "Forbidden. Insufficient permissions." });
         }
 
