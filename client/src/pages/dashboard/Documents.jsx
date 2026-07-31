@@ -213,7 +213,7 @@ function Documents() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-[14px]">
                                             <a 
-                                                href={`http://localhost:5000/api/documents/download/${d.id}`}
+                                                href={`https://insurance-management-2-0iji.onrender.com/api/documents/download/${d.id}`}
                                                 download
                                                 className="text-blue-600 hover:underline font-semibold flex items-center gap-1.5 cursor-pointer"
                                             >

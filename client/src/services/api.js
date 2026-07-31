@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL || "https://insurance-management-2-0iji.onrender.com/api";
+
 const api = axios.create({
-    baseURL: "http://localhost:5000/api",
+    baseURL: API_URL,
     headers: {
         "Content-Type": "application/json",
     },
@@ -27,7 +29,7 @@ api.interceptors.response.use(
             try {
                 const refreshToken = localStorage.getItem("refreshToken");
                 if (refreshToken) {
-                    const res = await axios.post("http://localhost:5000/api/auth/refresh", { refreshToken });
+                    const res = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
                     if (res.status === 200) {
                         localStorage.setItem("accessToken", res.data.accessToken);
                         localStorage.setItem("refreshToken", res.data.refreshToken);
