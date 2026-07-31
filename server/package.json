@@ -4,7 +4,7 @@
   "description": "Insurance Management Platform Backend API",
   "main": "dist/server.js",
   "scripts": {
-    "build": "npx prisma db push && npx prisma generate && tsc && npx ts-node src/seed.ts",
+    "build": "node node_modules/prisma/build/index.js db push && node node_modules/prisma/build/index.js generate && tsc && npx ts-node src/seed.ts",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "prisma:generate": "prisma generate",
