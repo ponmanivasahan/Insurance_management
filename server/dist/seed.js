@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
-const bcrypt_1 = __importDefault(require("bcrypt"));
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const prisma = new client_1.PrismaClient();
 async function main() {
     console.log("Start seeding...");
@@ -20,9 +20,9 @@ async function main() {
     await prisma.user.deleteMany({});
     await prisma.systemSetting.deleteMany({});
     // Hash passwords
-    const adminPassword = await bcrypt_1.default.hash("admin123", 10);
-    const agentPassword = await bcrypt_1.default.hash("agent123", 10);
-    const customerPassword = await bcrypt_1.default.hash("customer123", 10);
+    const adminPassword = await bcryptjs_1.default.hash("admin123", 10);
+    const agentPassword = await bcryptjs_1.default.hash("agent123", 10);
+    const customerPassword = await bcryptjs_1.default.hash("customer123", 10);
     // Create default Users
     const admin = await prisma.user.create({
         data: {

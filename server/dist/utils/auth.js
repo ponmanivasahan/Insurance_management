@@ -4,17 +4,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.verifyRefreshToken = exports.verifyAccessToken = exports.generateRefreshToken = exports.generateAccessToken = exports.comparePassword = exports.hashPassword = void 0;
-const bcrypt_1 = __importDefault(require("bcrypt"));
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const JWT_SECRET = process.env.JWT_SECRET || "insureflow_super_secret_key_1234567890";
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "insureflow_super_refresh_secret_key_0987654321";
 const hashPassword = async (password) => {
-    const salt = await bcrypt_1.default.genSalt(10);
-    return bcrypt_1.default.hash(password, salt);
+    const salt = await bcryptjs_1.default.genSalt(10);
+    return bcryptjs_1.default.hash(password, salt);
 };
 exports.hashPassword = hashPassword;
 const comparePassword = async (password, hash) => {
-    return bcrypt_1.default.compare(password, hash);
+    return bcryptjs_1.default.compare(password, hash);
 };
 exports.comparePassword = comparePassword;
 const generateAccessToken = (payload) => {
